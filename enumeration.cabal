@@ -51,4 +51,4 @@ Library
   hs-source-dirs:       src
   build-depends:        base >= 4.4.0 && < 5, Cabal >= 1.16.0, containers, arith-encode,
                         binary
-  exposed-modules:      
+  exposed-modules:      Data.Enumeration
