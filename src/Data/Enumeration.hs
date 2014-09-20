@@ -39,6 +39,7 @@ module Data.Enumeration(
        -- ** Using Enumerations
        fromPath,
        toPath,
+       toSizedPath,
        withPrefix,
        numBranches,
        prefix,
@@ -67,6 +68,10 @@ data Enumeration ty =
   Enumeration {
     -- | Convert a @ty@ to a @Path@
     toPath :: !(ty -> Path),
+    -- | Convert to a list of pairs, where the @fst@ holds
+    -- the path entry, and @snd@ holds @numBranches@.  This is used
+    -- primarily for encoding values as binary.
+    toSizedPath :: !(ty -> [(Integer, Maybe Integer)]),
     -- | Generate an @ty@ from a @Path@
     fromPath :: !(Path -> ty),
     -- | Given a prefix path, get an enumeration that generates @ty@s
@@ -115,13 +120,17 @@ singletonWithPrefix prefixPath val =
       | val' == val = []
       | otherwise = throw (IllegalArgument "Bad argument to singleton")
 
+    toSizedPathFunc val'
+      | val' == val = []
+      | otherwise = throw (IllegalArgument "Bad argument to singleton")
+
     withPrefixFunc [] = out
     withPrefixFunc path =
       throw (BadPath ("Extra path elements " ++ showCompletePath path))
 
     out = Enumeration { fromPath = fromPathFunc, toPath = toPathFunc,
                         withPrefix = withPrefixFunc, numBranches = Just 0,
-                        prefix = prefixPath }
+                        prefix = prefixPath, toSizedPath = toSizedPathFunc }
   in
     out
 
@@ -140,21 +149,22 @@ fromEncoding = fromEncodingWithPrefix []
 fromEncodingWithPrefix :: Eq ty => Path -> Encoding ty -> Enumeration ty
 fromEncodingWithPrefix prefixPath enc =
   let
-    fromPathFunc [ encoded ] = decode enc encoded
+    fromPathFunc [encoded] = decode enc encoded
     fromPathFunc [] = throw (BadPath "Path too short")
     fromPathFunc (_ : path) =
       throw (BadPath ("Extra path elements " ++ showPath path))
 
-    toPathFunc val = [ encode enc val ]
+    toPathFunc val = [encode enc val]
+    toSizedPathFunc val = [(encode enc val, size enc)]
 
-    withPrefixFunc [ encoded ] = singleton (decode enc encoded)
+    withPrefixFunc [encoded] = singleton (decode enc encoded)
     withPrefixFunc [] = throw (BadPath "Path too short")
     withPrefixFunc (_ : path) =
       throw (BadPath ("Extra path elements " ++ showPath path))
   in
     Enumeration { fromPath = fromPathFunc, toPath = toPathFunc,
                   withPrefix = withPrefixFunc, numBranches = size enc,
-                  prefix = prefixPath }
+                  prefix = prefixPath, toSizedPath = toSizedPathFunc }
 
 -- | Create an @Enumeration@ with an empty prefix that uses an
 -- @Encoding@ to convert the first element of the path to an interim
@@ -193,9 +203,15 @@ stepWithPrefix prefixPath enc build extract =
       in
         encode enc extracted : toPath (build extracted) val
 
+    toSizedPathFunc val =
+      let
+        extracted = extract val
+      in
+        (encode enc extracted, size enc) : toSizedPath (build extracted) val
+
     withPrefixFunc (first : rest) = withPrefix (build (decode enc first)) rest
     withPrefixFunc [] = throw (BadPath "Path too short")
   in
    Enumeration { fromPath = fromPathFunc, toPath = toPathFunc,
                  withPrefix = withPrefixFunc, numBranches = size enc,
-                 prefix = prefixPath }
+                 prefix = prefixPath, toSizedPath = toSizedPathFunc }
