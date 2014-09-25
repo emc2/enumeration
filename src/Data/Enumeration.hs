@@ -35,6 +35,7 @@ module Data.Enumeration(
        Enumeration,
        Path,
        BadPath(..),
+       IllegalArgument(..),
 
        -- ** Using Enumerations
        fromPath,
@@ -114,19 +115,19 @@ singletonWithPrefix prefixPath val =
 
     fromPathFunc [] = val
     fromPathFunc path =
-      throw (BadPath ("Extra path elements " ++ showCompletePath path))
+      throw $! BadPath $! "Extra path elements " ++ showCompletePath path
 
     toPathFunc val'
       | val' == val = []
-      | otherwise = throw (IllegalArgument "Bad argument to singleton")
+      | otherwise = throw $! IllegalArgument "Bad argument to singleton"
 
     toSizedPathFunc val'
       | val' == val = []
-      | otherwise = throw (IllegalArgument "Bad argument to singleton")
+      | otherwise = throw $! IllegalArgument "Bad argument to singleton"
 
     withPrefixFunc [] = out
     withPrefixFunc path =
-      throw (BadPath ("Extra path elements " ++ showCompletePath path))
+      throw $! BadPath $! "Extra path elements " ++ showCompletePath path
 
     out = Enumeration { fromPath = fromPathFunc, toPath = toPathFunc,
                         withPrefix = withPrefixFunc, numBranches = Just 0,
@@ -150,21 +151,24 @@ fromEncodingWithPrefix :: Eq ty => Path -> Encoding ty -> Enumeration ty
 fromEncodingWithPrefix prefixPath enc =
   let
     fromPathFunc [encoded] = decode enc encoded
-    fromPathFunc [] = throw (BadPath "Path too short")
+    fromPathFunc [] = throw $! BadPath "Path too short"
     fromPathFunc (_ : path) =
-      throw (BadPath ("Extra path elements " ++ showPath path))
+      throw $! BadPath $! "Extra path elements " ++ showPath path
 
     toPathFunc val = [encode enc val]
     toSizedPathFunc val = [(encode enc val, size enc)]
 
-    withPrefixFunc [encoded] = singleton (decode enc encoded)
-    withPrefixFunc [] = throw (BadPath "Path too short")
+    withPrefixFunc newPrefix @ [encoded] =
+      singletonWithPrefix (prefixPath ++ newPrefix) (decode enc encoded)
+    withPrefixFunc [] = out
     withPrefixFunc (_ : path) =
-      throw (BadPath ("Extra path elements " ++ showPath path))
+      throw $! BadPath $! "Extra path elements " ++ showPath path
+
+    out = Enumeration { fromPath = fromPathFunc, toPath = toPathFunc,
+                        withPrefix = withPrefixFunc, numBranches = size enc,
+                        prefix = prefixPath, toSizedPath = toSizedPathFunc }
   in
-    Enumeration { fromPath = fromPathFunc, toPath = toPathFunc,
-                  withPrefix = withPrefixFunc, numBranches = size enc,
-                  prefix = prefixPath, toSizedPath = toSizedPathFunc }
+    out
 
 -- | Create an @Enumeration@ with an empty prefix that uses an
 -- @Encoding@ to convert the first element of the path to an interim
@@ -172,46 +176,56 @@ fromEncodingWithPrefix prefixPath enc =
 -- the rest of the path.
 step :: Encoding ty1
      -- ^ The encoding for the first type.
-     -> (ty1 -> Enumeration ty2)
+     -> (Path -> ty1 -> Enumeration ty2)
      -- ^ A function that produces an enumeration from the first type.
      -> (ty2 -> ty1)
      -- ^ A function that extracts the first type from the second.
      -> Enumeration ty2
 step = stepWithPrefix []
 
--- | Create an @Enumeration@ with an empty prefix that uses an
--- @Encoding@ to convert the first element of the path to an interim
--- value, then uses that value to construct an @Enumeration@ to decode
--- the rest of the path.
+-- | Create an @Enumeration@ with a prefix that uses an @Encoding@ to
+-- convert the first element of the path to an interim value, then
+-- uses that value to construct an @Enumeration@ to decode the rest of
+-- the path.
 stepWithPrefix :: Path
                -- ^ The prefix path.
                -> Encoding ty1
                -- ^ The encoding for the first type.
-               -> (ty1 -> Enumeration ty2)
+               -> (Path -> ty1 -> Enumeration ty2)
                -- ^ A function that produces an enumeration from the first type.
                -> (ty2 -> ty1)
                -- ^ A function that extracts the first type from the second.
                -> Enumeration ty2
 stepWithPrefix prefixPath enc build extract =
   let
-    fromPathFunc (first : rest) = fromPath (build (decode enc first)) rest
-    fromPathFunc [] = throw (BadPath "Path too short")
+    fromPathFunc (first : rest) = fromPath (build prefixPath (decode enc first)) rest
+    fromPathFunc [] = throw $! BadPath "Path too short"
 
     toPathFunc val =
       let
         extracted = extract val
+        inner = build prefixPath extracted
       in
-        encode enc extracted : toPath (build extracted) val
+        encode enc extracted : toPath inner val
 
     toSizedPathFunc val =
       let
         extracted = extract val
+        inner = build prefixPath extracted
       in
-        (encode enc extracted, size enc) : toSizedPath (build extracted) val
+        (encode enc extracted, size enc) : toSizedPath inner val
 
-    withPrefixFunc (first : rest) = withPrefix (build (decode enc first)) rest
-    withPrefixFunc [] = throw (BadPath "Path too short")
+    withPrefixFunc (first : rest) =
+      let
+        extracted = decode enc first
+        newPrefix = prefixPath ++ [first]
+        inner = build newPrefix extracted
+      in
+       withPrefix inner rest
+    withPrefixFunc [] = out
+
+    out = Enumeration { fromPath = fromPathFunc, toPath = toPathFunc,
+                        withPrefix = withPrefixFunc, numBranches = size enc,
+                        prefix = prefixPath, toSizedPath = toSizedPathFunc }
   in
-   Enumeration { fromPath = fromPathFunc, toPath = toPathFunc,
-                 withPrefix = withPrefixFunc, numBranches = size enc,
-                 prefix = prefixPath, toSizedPath = toSizedPathFunc }
+    out
