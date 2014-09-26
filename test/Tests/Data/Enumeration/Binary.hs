@@ -28,12 +28,67 @@
 -- OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 
+-- Note: It takes an enormously long time for these tests to complete.
 module Tests.Data.Enumeration.Binary(tests) where
 
+import Data.Binary.Get
+import Data.Binary.Put
+import Data.Bits
+import Data.List
+import Data.Enumeration
+import Data.Enumeration.Binary
 import Test.HUnitPlus.Base
 
+import qualified Data.ArithEncode as ArithEncode
+
+integralInteger :: ArithEncode.Encoding Integer
+integralInteger = ArithEncode.integral
+
+intervalInteger :: Integer -> Integer -> ArithEncode.Encoding Integer
+intervalInteger = ArithEncode.interval
+
+testPutGet :: (Eq ty, Show ty) => Enumeration ty -> ty -> Assertion
+testPutGet enum val =
+  let
+    bs = runPut (putWithEnumeration enum val)
+    val' = runGet (getWithEnumeration enum) bs
+  in do
+    val @=? val'
+
+testEnumeration :: (Eq ty, Show ty) => String -> Enumeration ty -> [ty] -> Test
+testEnumeration name enc vals =
+  name ~: mapM_ (testPutGet enc) vals
+
+infiniteVals = [((1 `shiftL` 64) - 0x100)..((1 `shiftL` 64) + 0x100)] ++
+  (map (\n -> product (map (\m -> m * 8 + 1) [1..n])) [1..1500])
+
+components :: [(String, ArithEncode.Encoding Integer, [Integer])]
+components = [
+    ("singleton", (ArithEncode.singleton 1), [1]),
+    ("finite_2", (intervalInteger 1 2), [1, 2]),
+    ("finite_10", (intervalInteger 1 10), [1..10]),
+    ("finite_100", (intervalInteger 1 100), [1..100]),
+    ("finite_10000", (intervalInteger 1 10000), [1..1000]),
+    ("finite_64bit", (intervalInteger 0 0x100000000000000000000), [1..1000]),
+    ("infinite", integralInteger, infiniteVals)
+  ]
+
+crossprod as bs =
+  foldr (\a accum -> foldr (\b accum -> (a, b) : accum) accum bs) [] as
+
+pairs = crossprod components components
+
+makeTestCase ((name1, enc1, vals1), (name2, enc2, vals2)) =
+  let
+    vals = crossprod vals1 vals2
+    innerEncoding n = ArithEncode.wrap (Just . snd) (\n' -> Just (n, n')) enc2
+    innerEnum prefixPath = fromEncodingWithPrefix prefixPath . innerEncoding
+    enum = step enc1 innerEnum fst
+  in
+    (name1 ++ "_" ++ name2) ~: mapM_ (testPutGet enum) vals
+
 testlist :: [Test]
-testlist = []
+testlist = map makeTestCase pairs
 
 tests :: Test
 tests = "Binary" ~: testlist
