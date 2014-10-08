@@ -40,11 +40,11 @@ class Traversal trav where
   -- | Create a @Traversal@ from an @Enumeration@.
   mkTraversal :: Enumeration ty -> trav ty
   -- | Get the next item in the traversal.
-  getNext :: trav ty -> Maybe (ty, trav ty)
+  getNext :: trav ty -> Maybe (ty, Path, trav ty)
 
   -- | Get all items in the traversal as a list.
-  getAll :: trav ty -> [ty]
+  getAll :: trav ty -> [(ty, Path)]
   getAll trav =
     case getNext trav of
-      Just (item, next) -> item : getAll next
+      Just (item, path, next) -> (item, path) : getAll next
       Nothing -> []
