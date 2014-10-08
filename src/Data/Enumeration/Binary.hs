@@ -27,7 +27,7 @@
 -- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 -- OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
-{-# OPTIONS_GHC -Wall -Werror -funbox-strict-fields #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.Enumeration.Binary(
        putWithEnumeration,
@@ -74,6 +74,7 @@ putNatural remaining natural
       putWord8 output
       putNatural (remaining - 1) rest
 
+-- | Use an @Enumeration@ to write out a @ty@ as binary data
 putWithEnumeration :: Enumeration ty -> ty -> Put
 putWithEnumeration enum =
   let

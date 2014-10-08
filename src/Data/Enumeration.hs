@@ -81,7 +81,7 @@ data Enumeration ty =
     -- | Get the upper bound on values for the first path component,
     -- or @Nothing@ if there is no bound.
     numBranches :: !(Maybe Integer),
-    -- | The reversed prefix path.
+    -- | The prefix path.
     prefix :: !Path
   }
 
