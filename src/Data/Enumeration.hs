@@ -198,7 +198,8 @@ stepWithPrefix :: Path
                -> Enumeration ty2
 stepWithPrefix prefixPath enc build extract =
   let
-    fromPathFunc (first : rest) = fromPath (build prefixPath (decode enc first)) rest
+    fromPathFunc (first : rest) =
+      fromPath (build prefixPath (decode enc first)) rest
     fromPathFunc [] = throw $! BadPath "Path too short"
 
     toPathFunc val =

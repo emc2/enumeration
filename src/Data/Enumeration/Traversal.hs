@@ -98,7 +98,7 @@ instance Traversal BreadthFirst where
                           BreadthFirst { bfQueue = rest })
           Just high
             -- If we are exhausting the current head of the queue, remove it
-            | curr + 1 < high ->
+            | curr + 1 >= high ->
               getNext BreadthFirst { bfQueue = rest |>
                                                (withPrefix enum [curr], 0) }
             -- Otherwise, keep it on the queue
@@ -137,7 +137,7 @@ mkPrioritizedTraversal scorefunc enum =
 inverseDepth :: (Enumeration ty, Integer) -> Float
 inverseDepth (enum, curr) =
   case numBranches enum of
-    Just finitemax -> -(fromIntegral (length (prefix enum)) +
+    Just finitemax -> -(fromIntegral (length (prefix enum)) -
                         (fromIntegral curr / fromIntegral finitemax))
     Nothing -> -(fromIntegral (length (prefix enum)))
 

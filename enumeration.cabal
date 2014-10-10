@@ -43,7 +43,7 @@ Test-Suite UnitTest
   Main-Is:              UnitTest.hs
   hs-source-dirs:       src test
   build-depends:        base >= 4.4.0 && < 5, Cabal >= 1.16.0, HUnit-Plus, arith-encode,
-                        binary, arithmoi, heap
+                        containers, binary, arithmoi, heap
   ghc-options:          -fhpc
 
 Library
