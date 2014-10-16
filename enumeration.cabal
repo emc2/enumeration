@@ -1,6 +1,6 @@
 Name:                   enumeration
 Category:               Data, Serialization, Test, Testing
-Version:                0.1.0
+Version:                0.2.0
 License:                BSD3
 License-File:           LICENSE
 Author:                 Eric McCorkle
@@ -30,8 +30,6 @@ Description:
   enumeration procedure can double as a binary serializer/deserializer.  For
   well-behaved enumeration procedures (ie. those where the mapping is an
   isomorphism), the resulting binary format should be very nearly succinct.
-  .
-  This is the first release candidate for 1.0 (initial release)
 Build-type:             Simple
 Cabal-version:          >= 1.16
 
