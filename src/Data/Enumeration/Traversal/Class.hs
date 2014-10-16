@@ -36,6 +36,7 @@ module Data.Enumeration.Traversal.Class(
 
 import Data.Enumeration
 
+-- | A typeclass representing a traversal scheme over an enumeration.
 class Traversal trav where
   -- | Create a @Traversal@ from an @Enumeration@.
   mkTraversal :: Enumeration ty -> trav ty

@@ -29,6 +29,10 @@
 -- SUCH DAMAGE.
 {-# OPTIONS_GHC -Wall -Werror #-}
 
+-- | Functions for binary serialization/deserialization of datatypes
+-- using an 'Enumeration'.  These functions write out/read in binary
+-- data as a sequence of natural numbers representing a path (using
+-- the same coding scheme as "Data.Encoding.Binary").
 module Data.Enumeration.Binary(
        putWithEnumeration,
        getWithEnumeration
@@ -74,7 +78,7 @@ putNatural remaining natural
       putWord8 output
       putNatural (remaining - 1) rest
 
--- | Use an @Enumeration@ to write out a @ty@ as binary data
+-- | Use an 'Enumeration' to write out a @ty@ as binary data
 putWithEnumeration :: Enumeration ty -> ty -> Put
 putWithEnumeration enum =
   let
@@ -143,7 +147,7 @@ getNatural bytes =
   in
     getNatural' 0 0
 
--- | Use an @Enumeration@ to extract a @ty@ from binary data.
+-- | Use an 'Enumeration' to extract a @ty@ from binary data.
 getWithEnumeration :: Enumeration ty -> Get ty
 getWithEnumeration enum =
   case numBranches enum of

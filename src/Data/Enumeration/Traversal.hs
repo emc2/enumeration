@@ -29,6 +29,35 @@
 -- SUCH DAMAGE.
 {-# OPTIONS_GHC -Wall -Werror -funbox-strict-fields #-}
 
+-- | Functionality for traversing an 'Enumeration'.
+--
+-- This module provides a typeclass, 'Traversal', which represents a
+-- traversal scheme for 'Enumeration's.  Traversals should be largely
+-- independent of the 'Enumeration', though some variants like
+-- 'Prioritized' cannot be wholly independent.
+--
+-- Three 'Traversal' instances are provided by this module:
+-- 'DepthFirst', 'BreadthFirst', and 'Prioritized'.  All traversals
+-- work by maintaining a set of positions, which consist of an
+-- 'Enumeration' and an index (the next value to give as a first path
+-- element).  At each step, some position is \"expanded\" by replacing
+-- it with two positions: one with the index as an additional prefix
+-- element, and one with the index incremented.
+--
+-- 'DepthFirst' is a simple depth-first scheme.  It is not guaranteed
+-- to reach all elements, and in some 'Enumeration's, it may never
+-- produce an answer.
+--
+-- 'BreadthFirst' is a breadth-first scheme, which tends to be
+-- better-behaved than 'DepthFirst'.  It explores paths in ascending
+-- order of path length.  For 'Enumeration's with infinite-sized
+-- branches, its behavior is not strictly breadth-first (as this would
+-- never yield an answer), but it should still behave well for this
+-- case.
+--
+-- 'Prioritized' is a scheme that uses a scoring function to rank
+-- paths.  At each step, it will select the \"best\" (highest-ranked)
+-- option and expand it.
 module Data.Enumeration.Traversal(
        Traversal(..),
        DepthFirst,
@@ -117,6 +146,7 @@ instance Traversal BreadthFirst where
 -- option.  Completeness depends entirely on the scoring function.
 data Prioritized ty =
   Prioritized {
+    -- | The scoring function used in a 'Prioritized' traversal scheme.
     scoring :: !((Enumeration ty, Integer) -> Float),
     priHeap :: !(MaxPrioHeap Float (Enumeration ty, Integer))
   }
